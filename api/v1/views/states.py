@@ -1,92 +1,167 @@
 #!/usr/bin/python3
-""" objects that handle all default RestFul API actions for States """
-from models.state import State
-from models import storage
+"""
+Create a new view for State objects that handles
+all default RESTFul API actions:
+"""
 from api.v1.views import app_views
-from flask import abort, jsonify, make_response, request
-from flasgger.utils import swag_from
+from flask import Flask, jsonify, abort, request
+from models import storage
+from models.state import State
+import models
 
 
 @app_views.route('/states', methods=['GET'], strict_slashes=False)
-@swag_from('documentation/state/get_state.yml', methods=['GET'])
-def get_states():
+def status():
     """
-    Retrieves the list of all State objects
+    A simple endpoint to greet a user by their name.
+    ---
+    parameters:
+      - name: states
+        in: path
+        type: string
+        enum: ["state"]
+        required: true
+        default: /
+    definitions:
+      Hello:
+        type: string
+        properties:
+          hello: array
+    responses:
+      200:
+        description: A list of colors (may be filtered by palette)
+        schema:
+          $ref: '#/definitions/Hello'
+        examples:
+          hello mayouka
     """
-    all_states = storage.all(State).values()
-    list_states = []
-    for state in all_states:
-        list_states.append(state.to_dict())
-    return jsonify(list_states)
+    slist = []
+    states = storage.all(State).values()
+    for state in states:
+        slist.append(state.to_dict())
+    return jsonify(slist)
 
 
-@app_views.route('/states/<state_id>', methods=['GET'], strict_slashes=False)
-@swag_from('documentation/state/get_id_state.yml', methods=['get'])
+@app_views.route('/states/<state_id>/', methods=['GET'], strict_slashes=False)
 def get_state(state_id):
-    """ Retrieves a specific State """
-    state = storage.get(State, state_id)
-    if not state:
+    """
+    A simple endpoint to greet a user by their name.
+    ---
+    parameters:
+      - name: state get
+        in: path
+        type: string
+        enum: ["0d054d4d-c448-4639-bd25-f710cc235864"]
+        required: true
+        default: /states/<state_id>
+    definitions:
+      state:
+        type: string
+        properties:
+          states: states id
+    responses:
+      200:
+        description: states/state_id
+        schema:
+          $ref: '#/definitions/state'
+        examples:
+          hello mayouka
+    """
+    states = storage.all(State)
+    key = "State."+state_id
+    if key not in states:
         abort(404)
-
-    return jsonify(state.to_dict())
+    a = states[key]
+    return jsonify(a.to_dict())
 
 
 @app_views.route('/states/<state_id>', methods=['DELETE'],
                  strict_slashes=False)
-@swag_from('documentation/state/delete_state.yml', methods=['DELETE'])
 def delete_state(state_id):
     """
-    Deletes a State Object
+    A simple endpoint to greet a user by their name.
+    ---
+    parameters:
+      - name: Delete
+        in: path
+        type: string
+        enum: ["88bc6f3c-c535-4b80-93dc-b1cd4e2d61a5"]
+        required: true
+        default: /states/<state_id>
+    definitions:
+      DELETE:
+        type: string
+        properties:
+          delete: delete file
+    responses:
+      200:
+        description: delete id
+        schema:
+          $ref: '#/definitions/DELETE'
+        examples:
+          DELETE /api/v1/states/<state_id>
     """
-
-    state = storage.get(State, state_id)
-
-    if not state:
+    states = storage.all(State)
+    key = "State."+state_id
+    if key not in states:
         abort(404)
-
-    storage.delete(state)
+    a = states[key]
+    storage.delete(a)
     storage.save()
-
-    return make_response(jsonify({}), 200)
+    return jsonify({}), 200
 
 
 @app_views.route('/states', methods=['POST'], strict_slashes=False)
-@swag_from('documentation/state/post_state.yml', methods=['POST'])
-def post_state():
+def post():
     """
-    Creates a State
+    A simple endpoint to greet a user by their name.
+    ---
+    parameters:
+      - name: Delete
+        in: path
+        type: string
+        enum: ["states"]
+        required: true
+        default: /states/<state_id>
+    definitions:
+      DELETE:
+        type: string
+        properties:
+          delete: delete file
+    responses:
+      200:
+        description: delete id
+        schema:
+          $ref: '#/definitions/DELETE'
+        examples:
+          DELETE /api/v1/states/<state_id>
     """
-    if not request.get_json():
-        abort(400, description="Not a JSON")
-
-    if 'name' not in request.get_json():
-        abort(400, description="Missing name")
-
-    data = request.get_json()
-    instance = State(**data)
-    instance.save()
-    return make_response(jsonify(instance.to_dict()), 201)
+    js = request.get_json()
+    if not js:
+        abort(400, 'Not a JSON')
+    if 'name' not in js:
+        abort(400, 'Missing name')
+    state = State(**js)
+    storage.new(state)
+    storage.save()
+    return jsonify(state.to_dict()), 201
 
 
 @app_views.route('/states/<state_id>', methods=['PUT'], strict_slashes=False)
-@swag_from('documentation/state/put_state.yml', methods=['PUT'])
-def put_state(state_id):
-    """
-    Updates a State
-    """
-    state = storage.get(State, state_id)
-
-    if not state:
+def put(state_id):
+    js = request.get_json()
+    states = storage.all(State)
+    key = "State."+state_id
+    if key not in states:
         abort(404)
-
-    if not request.get_json():
-        abort(400, description="Not a JSON")
-
-    ignore = ['id', 'created_at', 'updated_at']
-
-    data = request.get_json()
-    for key, value in data.items():
-        if key not in ignore:
-            setattr(state, key, value)
+    if not js:
+        abort(400, 'Not a JSON')
+    a = states[key]
+    m = a.__dict__
+    for i in js:
+        if i not in ["id", "created_at",
+                     "updated_at"]:
+            m[i] = js[i]
+            storage.save()
     storage.save()
-    return make_response(jsonify(state.to_dict()), 200)
+    return jsonify(a.to_dict()), 200

@@ -1,30 +1,25 @@
 #!/usr/bin/python3
-""" Index """
-from models.amenity import Amenity
-from models.city import City
-from models.place import Place
-from models.review import Review
-from models.state import State
-from models.user import User
-from models import storage
+"""
+mport app_views from api.v1.views
+create a route /status on the object
+app_views that returns a JSON: "status" ok
+"""
 from api.v1.views import app_views
-from flask import jsonify
+from flask import Flask, jsonify
+from models import storage
+from models import amenity, city, place, review, state, user
 
 
-@app_views.route('/status', methods=['GET'], strict_slashes=False)
-def status():
-    """ Status of API """
+@app_views.route('/status', strict_slashes=False)
+def api_status():
     return jsonify({"status": "OK"})
 
 
-@app_views.route('/stats', methods=['GET'], strict_slashes=False)
-def number_objects():
-    """ Retrieves the number of each objects by type """
-    classes = [Amenity, City, Place, Review, State, User]
-    names = ["amenities", "cities", "places", "reviews", "states", "users"]
-
-    num_objs = {}
-    for i in range(len(classes)):
-        num_objs[names[i]] = storage.count(classes[i])
-
-    return jsonify(num_objs)
+@app_views.route('/stats', strict_slashes=False)
+def count():
+    return jsonify(amenities=storage.count(amenity.Amenity),
+                   cities=storage.count(city.City),
+                   places=storage.count(place.Place),
+                   reviews=storage.count(review.Review),
+                   states=storage.count(state.State),
+                   users=storage.count(user.User))

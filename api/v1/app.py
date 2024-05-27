@@ -1,49 +1,69 @@
 #!/usr/bin/python3
-""" Flask Application """
+"""
+create a variable app, instance of Flask
+"""
+
+from flask import Flask, jsonify
 from models import storage
 from api.v1.views import app_views
-from os import environ
-from flask import Flask, render_template, make_response, jsonify
 from flask_cors import CORS
+import os
 from flasgger import Swagger
-from flasgger.utils import swag_from
 
 app = Flask(__name__)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+CORS(app, resources={r"/*": {"origins": "0.0.0.0"}})
 app.register_blueprint(app_views)
-cors = CORS(app, resources={r"/*": {"origins": "0.0.0.0"}})
+
+swagger = Swagger(app)
+
+
+@app.route("/")
+def hello():
+    """
+    A simple endpoint to greet a user by their name.
+    ---
+    parameters:
+      - name: palette
+        in: path
+        type: string
+        enum: ["hello"]
+        required: true
+        default: /
+    definitions:
+      Hello:
+        type: string
+        properties:
+          hello: array
+    responses:
+      200:
+        description: A list of colors (may be filtered by palette)
+        schema:
+          $ref: '#/definitions/Hello'
+        examples:
+          hello mayouka
+    """
+    return jsonify("hello mayouka")
 
 
 @app.teardown_appcontext
-def close_db(error):
-    """ Close Storage """
+def teardown_db(exception):
     storage.close()
 
 
+"""
+create a handler for 404 errors that
+returns a JSON-formatted 404 status code
+response
+"""
+
+
 @app.errorhandler(404)
-def not_found(error):
-    """ 404 Error
-    ---
-    responses:
-      404:
-        description: a resource was not found
-    """
-    return make_response(jsonify({'error': "Not found"}), 404)
-
-app.config['SWAGGER'] = {
-    'title': 'AirBnB clone Restful API',
-    'uiversion': 3
-}
-
-Swagger(app)
+def page_not_found(e):
+    # note that we set the 404 status explicitly
+    return jsonify({"error": "Not found"}), 404
 
 
 if __name__ == "__main__":
-    """ Main Function """
-    host = environ.get('HBNB_API_HOST')
-    port = environ.get('HBNB_API_PORT')
-    if not host:
-        host = '0.0.0.0'
-    if not port:
-        port = '5000'
-    app.run(host=host, port=port, threaded=True)
+    host = os.getenv("HBNB_API_HOST", "0.0.0.0")
+    port = os.getenv("HBNB_API_PORT", 5000)
+    app.run(debug=True, host=host, port=port, threaded=True)
